@@ -12,3 +12,14 @@ services:
       - ./data:/app/data
     restart: unless-stopped
 
+  telegram-poller:
+    build: .
+    container_name: auto-ledger-telegram-poller
+    command: ["python", "-m", "app.telegram_poller"]
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    profiles:
+      - tg-polling
