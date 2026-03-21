@@ -88,3 +88,16 @@ def summary(
         balance=income_total - expense_total,
     )
 
+
+@router.delete(
+    "/records/{record_id}",
+    dependencies=[Depends(require_api_key)],
+)
+def delete_record(record_id: int, db: Session = Depends(get_db)):
+    tx = db.get(Transaction, record_id)
+    if not tx:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+    db.delete(tx)
+    db.commit()
+    return {"ok": True, "deleted_id": record_id}
+

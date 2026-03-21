@@ -113,12 +113,16 @@ def _extract_datetime(text: str, tz_name: str) -> tuple[datetime, str]:
 
 
 def _extract_amount(text: str) -> tuple[float, str]:
-    amount_pattern = re.compile(r"([+-]?\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱|rmb|RMB|¥)?")
+    amount_pattern = re.compile(r"([+-]?\d+(?:\.\d{1,2})?)\s*(元|块钱|块|rmb|RMB|¥)?")
     candidates = list(amount_pattern.finditer(text))
     if not candidates:
         raise ValueError("消息中没有识别到金额，示例：`午饭 23` 或 `收入 500 工资`")
 
-    selected = max(candidates, key=lambda m: abs(float(m.group(1))))
+    # Prefer numbers with currency suffix (元/块/RMB/¥)
+    with_unit = [m for m in candidates if m.group(2)]
+    pool = with_unit if with_unit else candidates
+
+    selected = max(pool, key=lambda m: abs(float(m.group(1))))
     raw_num = selected.group(1)
     amount = abs(float(raw_num))
 

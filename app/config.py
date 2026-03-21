@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     telegram_bot_token: str = ""
     telegram_webhook_secret: str = ""
+    telegram_allowed_chat_ids: str = ""
 
     wechat_token: str = ""
 

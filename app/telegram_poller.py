@@ -14,7 +14,23 @@ from .telegram_commands import build_command_reply
 
 LOGGER = logging.getLogger(__name__)
 POLL_TIMEOUT_SECONDS = 50
-RETRY_DELAY_SECONDS = 3
+RETRY_DELAY_INITIAL = 3
+RETRY_DELAY_MAX = 60
+
+
+def _allowed_chat_ids() -> set[int]:
+    raw = settings.telegram_allowed_chat_ids.strip()
+    if not raw:
+        return set()
+    ids: set[int] = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if part:
+            try:
+                ids.add(int(part))
+            except ValueError:
+                LOGGER.warning("Invalid chat_id in TELEGRAM_ALLOWED_CHAT_IDS: %s", part)
+    return ids
 
 
 def _extract_message(update: dict[str, Any]) -> tuple[str | None, int | None, int | None]:
@@ -43,6 +59,12 @@ async def _reply_telegram(client: httpx.AsyncClient, api_base: str, chat_id: int
 async def _process_update(client: httpx.AsyncClient, api_base: str, update: dict[str, Any]) -> None:
     text, chat_id, message_id = _extract_message(update)
     if not text:
+        return
+
+    # Chat ID whitelist check
+    allowed = _allowed_chat_ids()
+    if allowed and chat_id not in allowed:
+        LOGGER.info("Ignored message from unauthorized chat_id=%s", chat_id)
         return
 
     try:
@@ -92,6 +114,7 @@ async def run_poller() -> None:
     api_base = f"https://api.telegram.org/bot{settings.telegram_bot_token}"
 
     offset: int | None = None
+    retry_delay = RETRY_DELAY_INITIAL
     async with httpx.AsyncClient(timeout=POLL_TIMEOUT_SECONDS + 10) as client:
         # Polling and webhook cannot work at the same time for the same bot.
         try:
@@ -109,14 +132,19 @@ async def run_poller() -> None:
                 resp.raise_for_status()
                 body = resp.json()
             except Exception:
-                LOGGER.exception("getUpdates request failed, retrying in %ss", RETRY_DELAY_SECONDS)
-                await asyncio.sleep(RETRY_DELAY_SECONDS)
+                LOGGER.exception("getUpdates request failed, retrying in %ss", retry_delay)
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, RETRY_DELAY_MAX)
                 continue
 
             if not body.get("ok"):
                 LOGGER.warning("getUpdates returned non-ok body: %s", body)
-                await asyncio.sleep(RETRY_DELAY_SECONDS)
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, RETRY_DELAY_MAX)
                 continue
+
+            # Reset backoff on success
+            retry_delay = RETRY_DELAY_INITIAL
 
             for update in body.get("result", []):
                 await _process_update(client, api_base, update)

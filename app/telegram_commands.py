@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .config import settings
 from .models import Transaction
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _now() -> datetime:
+    """Return current time in the configured timezone (naive datetime)."""
+    try:
+        tz = ZoneInfo(settings.tz)
+        return datetime.now(tz=tz).replace(tzinfo=None)
+    except Exception:
+        return datetime.now()
 
 DEFAULT_LIST_LIMIT = 10
 MAX_LIST_LIMIT = 50
@@ -37,6 +51,7 @@ def _help_text() -> str:
         "/summary [days] - 最近 days 天汇总（默认30）\n"
         "/month - 本月汇总\n"
         "/category [income|expense] [days] - 分类统计（默认本月支出）\n"
+        "/delete <id> - 删除指定账单（id 来自 /list）\n"
         "\n"
         "你也可以直接发记账语句，例如：午饭 23"
     )
@@ -48,7 +63,7 @@ def _format_record_line(index: int, tx: Transaction) -> str:
     ts = tx.occurred_at.strftime("%m-%d %H:%M")
     note = tx.note.strip() if tx.note else ""
     note_text = f" {note}" if note else ""
-    return f"{index}. {ts} {direction} {sign}{tx.amount:.2f} {tx.currency} [{tx.category}]{note_text}"
+    return f"{index}. [#{tx.id}] {ts} {direction} {sign}{tx.amount:.2f} {tx.currency} [{tx.category}]{note_text}"
 
 
 def _handle_list(db: Session, arg: str | None) -> str:
@@ -73,7 +88,7 @@ def _handle_summary(db: Session, arg: str | None) -> str:
         return "参数错误：/summary [days] 中 days 必须是正整数。"
     days = min(days, MAX_SUMMARY_DAYS)
 
-    start = datetime.now() - timedelta(days=days)
+    start = _now() - timedelta(days=days)
     income_stmt = select(func.coalesce(func.sum(Transaction.amount), 0)).where(
         Transaction.direction == "income",
         Transaction.occurred_at >= start,
@@ -129,7 +144,7 @@ def _build_range_summary(db: Session, start: datetime, end: datetime, title: str
 
 
 def _handle_month(db: Session) -> str:
-    now = datetime.now()
+    now = _now()
     start = _month_start(now)
     title = f"{now.year}-{now.month:02d} 本月汇总"
     return _build_range_summary(db, start=start, end=now, title=title)
@@ -167,7 +182,7 @@ def _handle_category(db: Session, arg: str | None) -> str:
         return parsed
     direction, days = parsed
 
-    now = datetime.now()
+    now = _now()
     if days is None:
         start = _month_start(now)
         period_text = f"{now.year}-{now.month:02d} 本月"
@@ -208,6 +223,22 @@ def _handle_category(db: Session, arg: str | None) -> str:
     return "\n".join(lines)
 
 
+def _handle_delete(db: Session, arg: str | None) -> str:
+    record_id = _safe_int(arg) if arg else None
+    if record_id is None or record_id <= 0:
+        return "参数错误：/delete <id>，id 为账单编号（可通过 /list 查看）。"
+
+    tx = db.get(Transaction, record_id)
+    if not tx:
+        return f"未找到编号为 {record_id} 的账单。"
+
+    direction = "收入" if tx.direction == "income" else "支出"
+    info = f"{direction} {tx.amount:.2f} {tx.currency} [{tx.category}]"
+    db.delete(tx)
+    db.commit()
+    return f"已删除账单 #{record_id}：{info}"
+
+
 def build_command_reply(text: str, db: Session) -> str | None:
     stripped = text.strip()
     if not stripped.startswith("/"):
@@ -227,5 +258,7 @@ def build_command_reply(text: str, db: Session) -> str | None:
         return _handle_month(db)
     if command == "/category":
         return _handle_category(db, arg)
+    if command == "/delete":
+        return _handle_delete(db, arg)
 
     return "未知命令，发送 /help 查看可用命令。"
