@@ -45,6 +45,24 @@ flowchart LR
 
 ## 快速开始
 
+### 方式零：服务器一键运行（推荐）
+
+```bash
+git clone <your-repo-url> auto-ledger
+cd auto-ledger
+chmod +x scripts/one_click_run.sh
+./scripts/one_click_run.sh
+```
+
+脚本会自动：
+
+- 检查并安装 Docker（若未安装）
+- 创建 `.env`（若不存在）
+- 自动生成 `APP_API_KEY`、`TELEGRAM_WEBHOOK_SECRET`、`WECHAT_TOKEN`
+- 自动选择启动模式：
+  - 配置了真实 `DOMAIN`：`app + caddy`（HTTPS webhook 模式）
+  - 未配置 `DOMAIN`：快速模式（HTTP，且可选 Telegram polling）
+
 ### 方式一：本地 Docker 启动
 
 ```bash
@@ -107,6 +125,15 @@ chmod +x scripts/deploy_server.sh
 
 ```bash
 curl https://<YOUR_DOMAIN>/health
+```
+
+## Docker 镜像
+
+本项目可直接构建镜像：
+
+```bash
+docker build -t auto-ledger:latest .
+docker run -d --name auto-ledger -p 8000:8000 --env-file .env -v $(pwd)/data:/app/data auto-ledger:latest
 ```
 
 ## Webhook 接入
@@ -190,6 +217,7 @@ app/
     styles.css
 scripts/
   deploy_server.sh       # 服务器一键启动
+  one_click_run.sh       # 安装+部署一体化脚本
 ```
 
 ## Roadmap
