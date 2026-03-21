@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto Ledger</title>
+  <link rel="stylesheet" href="/app/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Auto Ledger</h1>
+    <p class="subtitle">发消息自动记账，手机实时查看</p>
+
+    <section class="card">
+      <h2>连接设置</h2>
+      <form id="key-form">
+        <input id="api-key" placeholder="可选：输入 APP_API_KEY 后保存" />
+        <button type="submit">保存密钥</button>
+      </form>
+      <p class="hint">如果服务端未设置 APP_API_KEY，可以留空。</p>
+    </section>
+
+    <section class="card">
+      <h2>快速入账</h2>
+      <form id="parse-form">
+        <input id="text" placeholder="例如：午饭 23 / 收入 5000 工资" required />
+        <button type="submit">解析并入账</button>
+      </form>
+      <p id="result" class="result"></p>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>最近流水</h2>
+        <button id="refresh-btn" type="button">刷新</button>
+      </div>
+      <ul id="records" class="records"></ul>
+    </section>
+  </main>
+  <script src="/app/app.js"></script>
+</body>
+</html>
