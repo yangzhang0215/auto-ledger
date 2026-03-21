@@ -211,5 +211,4 @@ scripts/
 
 ## License
 
-建议使用 MIT License 开源。  
-如果你还没添加许可证文件，可以新建 `LICENSE` 并填入 MIT 文本。
+本项目采用 MIT License，详见 [LICENSE](./LICENSE)。
