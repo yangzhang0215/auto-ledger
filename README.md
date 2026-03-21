@@ -200,6 +200,18 @@ X-API-Key: <APP_API_KEY>
 - `+88 红包`
 - `2026-03-20 咖啡 19`
 
+## Telegram 命令
+
+- `/help` 查看帮助
+- `/list` 查看最近 10 条账单
+- `/list 20` 查看最近 20 条账单（最大 50）
+- `/summary` 查看最近 30 天汇总
+- `/summary 7` 查看最近 7 天汇总
+- `/month` 查看本月汇总
+- `/category` 查看本月支出分类统计
+- `/category income` 查看本月收入分类统计
+- `/category expense 30` 查看最近 30 天支出分类统计
+
 ## 项目结构
 
 ```text

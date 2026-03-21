@@ -10,6 +10,7 @@ from .config import settings
 from .database import Base, SessionLocal, engine
 from .parser import parse_text_to_transaction
 from .services import create_transaction, parse_result_to_create
+from .telegram_commands import build_command_reply
 
 LOGGER = logging.getLogger(__name__)
 POLL_TIMEOUT_SECONDS = 50
@@ -44,13 +45,25 @@ async def _process_update(client: httpx.AsyncClient, api_base: str, update: dict
     if not text:
         return
 
+    try:
+        with SessionLocal() as db:
+            command_reply = build_command_reply(text, db)
+    except Exception:
+        LOGGER.exception("Failed to process command for update_id=%s", update.get("update_id"))
+        await _reply_telegram(client, api_base, chat_id, "命令处理失败，请稍后重试。")
+        return
+
+    if command_reply is not None:
+        await _reply_telegram(client, api_base, chat_id, command_reply)
+        return
+
     update_id = update.get("update_id")
     external_id = f"tg:{update_id or message_id}" if (update_id or message_id) else None
 
     try:
         parsed = parse_text_to_transaction(text, tz_name=settings.tz)
     except ValueError as exc:
-        await _reply_telegram(client, api_base, chat_id, f"Parse failed: {exc}")
+        await _reply_telegram(client, api_base, chat_id, f"解析失败: {exc}")
         return
 
     try:
@@ -59,15 +72,15 @@ async def _process_update(client: httpx.AsyncClient, api_base: str, update: dict
             tx = create_transaction(db, tx_payload)
     except Exception:
         LOGGER.exception("Failed to save transaction for update_id=%s", update_id)
-        await _reply_telegram(client, api_base, chat_id, "Record failed. Please retry.")
+        await _reply_telegram(client, api_base, chat_id, "记录失败，请重试。")
         return
 
-    direction_text = "income" if tx.direction == "income" else "expense"
+    direction_text = "收入" if tx.direction == "income" else "支出"
     await _reply_telegram(
         client,
         api_base,
         chat_id,
-        f"Recorded: {direction_text} {tx.amount:.2f} ({tx.category})",
+        f"已记账: {direction_text} {tx.amount:.2f} 元 ({tx.category})",
     )
 
 

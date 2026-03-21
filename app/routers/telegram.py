@@ -8,6 +8,7 @@ from ..config import settings
 from ..database import get_db
 from ..parser import parse_text_to_transaction
 from ..services import create_transaction, parse_result_to_create
+from ..telegram_commands import build_command_reply
 
 router = APIRouter(prefix="/webhook/telegram", tags=["telegram"])
 
@@ -48,6 +49,11 @@ async def telegram_webhook(path_secret: str, request: Request, db: Session = Dep
     text, chat_id, message_id = _extract_message(update)
     if not text:
         return {"ok": True, "ignored": True}
+
+    command_reply = build_command_reply(text, db)
+    if command_reply is not None:
+        await _reply_telegram(chat_id, command_reply)
+        return {"ok": True, "command_handled": True}
 
     update_id = update.get("update_id")
     external_id = f"tg:{update_id or message_id}" if (update_id or message_id) else None
