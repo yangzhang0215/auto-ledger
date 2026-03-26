@@ -78,11 +78,6 @@ if [[ ! -f ".env" ]]; then
   log ".env created from .env.example"
 fi
 
-if [[ -z "$(get_env_value APP_API_KEY)" ]]; then
-  set_env_value "APP_API_KEY" "$(random_secret)"
-  log "APP_API_KEY generated"
-fi
-
 if [[ -z "$(get_env_value TELEGRAM_WEBHOOK_SECRET)" ]]; then
   set_env_value "TELEGRAM_WEBHOOK_SECRET" "$(random_secret)"
   log "TELEGRAM_WEBHOOK_SECRET generated"
@@ -116,4 +111,3 @@ fi
 
 log "Use this command to see logs:"
 log "  ${DOCKER_CMD} compose logs -f --tail=100"
-

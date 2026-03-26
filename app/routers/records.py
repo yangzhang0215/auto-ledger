@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..auth import require_api_key
 from ..config import settings
 from ..database import get_db
 from ..models import Transaction
@@ -20,7 +19,6 @@ router = APIRouter(prefix="/api", tags=["records"])
 @router.post(
     "/parse",
     response_model=TransactionRead,
-    dependencies=[Depends(require_api_key)],
 )
 def parse_and_create(payload: ParseRequest, db: Session = Depends(get_db)):
     try:
@@ -36,7 +34,6 @@ def parse_and_create(payload: ParseRequest, db: Session = Depends(get_db)):
 @router.post(
     "/records",
     response_model=TransactionRead,
-    dependencies=[Depends(require_api_key)],
 )
 def create_record(payload: TransactionCreate, db: Session = Depends(get_db)):
     tx = create_transaction(db, payload)
@@ -46,7 +43,6 @@ def create_record(payload: TransactionCreate, db: Session = Depends(get_db)):
 @router.get(
     "/records",
     response_model=list[TransactionRead],
-    dependencies=[Depends(require_api_key)],
 )
 def list_records(
     db: Session = Depends(get_db),
@@ -66,7 +62,6 @@ def list_records(
 @router.get(
     "/summary",
     response_model=SummaryRead,
-    dependencies=[Depends(require_api_key)],
 )
 def summary(
     db: Session = Depends(get_db),
@@ -91,7 +86,6 @@ def summary(
 
 @router.delete(
     "/records/{record_id}",
-    dependencies=[Depends(require_api_key)],
 )
 def delete_record(record_id: int, db: Session = Depends(get_db)):
     tx = db.get(Transaction, record_id)
@@ -100,4 +94,3 @@ def delete_record(record_id: int, db: Session = Depends(get_db)):
     db.delete(tx)
     db.commit()
     return {"ok": True, "deleted_id": record_id}
-

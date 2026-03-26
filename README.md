@@ -9,7 +9,7 @@
 - 支持公众号服务器回调自动入账（文本消息）
 - 提供 REST API，可对接任意手机 App/小程序
 - 内置手机友好网页：`/app/`
-- 支持 API Key 鉴权，适合公网部署
+- 单人自用默认无鉴权，部署更简单
 
 ## 架构
 
@@ -58,7 +58,7 @@ chmod +x scripts/one_click_run.sh
 
 - 检查并安装 Docker（若未安装）
 - 创建 `.env`（若不存在）
-- 自动生成 `APP_API_KEY`、`TELEGRAM_WEBHOOK_SECRET`、`WECHAT_TOKEN`
+- 自动生成 `TELEGRAM_WEBHOOK_SECRET`、`WECHAT_TOKEN`
 - 自动选择启动模式：
   - 配置了真实 `DOMAIN`：`app + caddy`（HTTPS webhook 模式）
   - 未配置 `DOMAIN`：快速模式（HTTP，且可选 Telegram polling）
@@ -107,8 +107,6 @@ cp .env.example .env
 ```dotenv
 DOMAIN=ledger.example.com
 ACME_EMAIL=you@example.com
-APP_API_KEY=your-strong-random-key
-
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
 WECHAT_TOKEN=
@@ -162,12 +160,6 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
 
 ## API 概览
 
-所有 `/api/*` 接口支持可选鉴权头：
-
-```http
-X-API-Key: <APP_API_KEY>
-```
-
 主要接口：
 
 - `POST /api/parse`：文本解析并入账
@@ -183,7 +175,6 @@ X-API-Key: <APP_API_KEY>
 | 变量名 | 默认值 | 说明 |
 | --- | --- | --- |
 | `APP_NAME` | `Auto Ledger` | 应用名称 |
-| `APP_API_KEY` | 空 | API 鉴权密钥，建议生产必填 |
 | `TZ` | `Asia/Shanghai` | 解析时间时区 |
 | `DATABASE_URL` | `sqlite:///./data/bookkeeping.db` | 数据库连接串 |
 | `DOMAIN` | `ledger.example.com` | Caddy 域名 |

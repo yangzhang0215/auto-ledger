@@ -3,7 +3,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "Auto Ledger"
-    app_api_key: str = ""
     tz: str = "Asia/Shanghai"
     database_url: str = "sqlite:///./data/bookkeeping.db"
 
@@ -17,4 +16,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

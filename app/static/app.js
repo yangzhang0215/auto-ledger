@@ -3,10 +3,6 @@ const textInput = document.getElementById("text");
 const resultEl = document.getElementById("result");
 const recordsEl = document.getElementById("records");
 const refreshBtn = document.getElementById("refresh-btn");
-const keyForm = document.getElementById("key-form");
-const apiKeyInput = document.getElementById("api-key");
-
-const API_KEY_STORAGE_KEY = "auto_ledger_api_key";
 
 function fmtDate(value) {
   try {
@@ -39,16 +35,6 @@ function renderRecords(records) {
     .join("");
 }
 
-function getApiKey() {
-  return (localStorage.getItem(API_KEY_STORAGE_KEY) || "").trim();
-}
-
-function authHeaders(extra = {}) {
-  const key = getApiKey();
-  if (!key) return extra;
-  return { ...extra, "X-API-Key": key };
-}
-
 async function fetchJson(url, options = {}) {
   const resp = await fetch(url, options);
   const data = await resp.json().catch(() => ({}));
@@ -61,9 +47,7 @@ async function fetchJson(url, options = {}) {
 
 async function loadRecords() {
   try {
-    const data = await fetchJson("/api/records?limit=50", {
-      headers: authHeaders(),
-    });
+    const data = await fetchJson("/api/records?limit=50");
     renderRecords(data);
   } catch (error) {
     recordsEl.innerHTML = `<li>加载失败：${error.message}</li>`;
@@ -79,7 +63,7 @@ parseForm.addEventListener("submit", async (event) => {
   try {
     const data = await fetchJson("/api/parse", {
       method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, source: "web" }),
     });
     const directionText = data.direction === "income" ? "收入" : "支出";
@@ -91,19 +75,5 @@ parseForm.addEventListener("submit", async (event) => {
     return;
   }
 });
-
-keyForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const key = apiKeyInput.value.trim();
-  if (key) {
-    localStorage.setItem(API_KEY_STORAGE_KEY, key);
-  } else {
-    localStorage.removeItem(API_KEY_STORAGE_KEY);
-  }
-  resultEl.textContent = key ? "API Key 已保存" : "已清除 API Key";
-  await loadRecords();
-});
-
-apiKeyInput.value = getApiKey();
 refreshBtn.addEventListener("click", loadRecords);
 loadRecords();
